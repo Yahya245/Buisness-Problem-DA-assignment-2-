@@ -1,78 +1,80 @@
-# Data cleaning & reshaping logic
-
 # Clean_data.py
-
 import pandas as pd
+import os
 
-# -------------------
-# Helper functions
-# -------------------
+PROCESSED_PATH = "Processed data/"
 
-def standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Lowercase, strip, and replace spaces in column names."""
-    df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
+# Ensure folder exists
+os.makedirs(PROCESSED_PATH, exist_ok=True)
+
+# --- Utility functions ---
+def standardise_columns(df):
+    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
     return df
 
-def convert_dtypes(df: pd.DataFrame) -> pd.DataFrame:
-    """Convert year/price/value columns to numeric types."""
+def convert_dtypes(df):
     for col in df.columns:
-        if col not in ["country", "year"]:
+        if "year" in col or col.isdigit():
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        elif "value_added" in col or "price" in col:
             df[col] = pd.to_numeric(df[col], errors='coerce')
     return df
 
-def drop_missing_key_rows(df: pd.DataFrame, keys: list) -> pd.DataFrame:
-    """Drop rows missing critical key values."""
+def drop_missing_key_rows(df, keys):
     return df.dropna(subset=keys)
 
-# -------------------
-# Energy dataset
-# -------------------
-
+# --- Energy cleaning ---
 def clean_energy_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Clean electricity price dataset.
-    """
     df = standardise_columns(df)
+    # Identify columns
+    country_col = [c for c in df.columns if "country" in c.lower()][0]
+    year_col = [c for c in df.columns if "time" in c.lower() or "year" in c.lower()][0]
+    price_col = [c for c in df.columns if "electricity" in c.lower()][0]
 
-    # Map actual column names from World Bank CSV
-    # Adjust this if your column names differ
+    df = df[[country_col, year_col, price_col]]
     df = df.rename(columns={
-        'country_name': 'country',
-        'time': 'year',
-        'getting_electricity:_price_of_electricity_(us_cents_per_kwh)_(db16-20_methodology)_[ic.elc.pri.kh.db1619]': 'electricity_price'
+        country_col: "country",
+        year_col: "year",
+        price_col: "electricity_price"
     })
-
-    df = df[['country', 'year', 'electricity_price']]
-
     df = convert_dtypes(df)
     df = drop_missing_key_rows(df, ["country", "year", "electricity_price"])
-
     return df
 
-# -------------------
-# Industry dataset
-# -------------------
-
+# --- Industry cleaning ---
 def clean_industry_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Clean industry value added dataset (wide → long format).
-    """
     df = standardise_columns(df)
+    id_vars = ["country_name", "country_code", "indicator_name", "indicator_code"]
+    value_vars = [c for c in df.columns if c not in id_vars and "unnamed" not in c]
 
-    # Keep only country + year columns (years usually start from column index 4)
-    cols_to_keep = [df.columns[0]] + list(df.columns[4:])
-    df = df[cols_to_keep]
+    df_long = pd.melt(
+        df,
+        id_vars=id_vars,
+        value_vars=value_vars,
+        var_name="year",
+        value_name="industry_value_added"
+    )
 
-    # Melt wide → long
-    df = df.melt(id_vars=[df.columns[0]],
-                 var_name="year",
-                 value_name="industry_value_added")
+    df_long = df_long.rename(columns={"country_name": "country"})
+    df_long['year'] = pd.to_numeric(df_long['year'], errors='coerce')
+    df_long['industry_value_added'] = pd.to_numeric(df_long['industry_value_added'], errors='coerce')
 
-    # Rename first column to 'country'
-    df = df.rename(columns={df.columns[0]: "country"})
+    df_long = drop_missing_key_rows(df_long, ["country", "year", "industry_value_added"])
+    return df_long
 
-    df = convert_dtypes(df)
-    df = drop_missing_key_rows(df, ["country", "year", "industry_value_added"])
+# --- Saving ---
+def save_clean(df, name):
+    path = os.path.join(PROCESSED_PATH, name)
+    df.to_csv(path, index=False)
+    print(f"Cleaned dataset saved: {path}")
 
-    return df
+
+
+
+
+
+
+
+
+
 
