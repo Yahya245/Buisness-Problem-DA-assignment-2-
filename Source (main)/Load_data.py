@@ -69,7 +69,7 @@ def load_industry_data() -> pd.DataFrame:
         Industry value added (% of GDP) by country and year.
     """
 
-    path = os.path.join("Raw data","Industry GDP Datasets", "Industry-output.csv")
+    path = os.path.join("Raw data","Industry GDP Datasets", "Industry-GDP.csv")
     df = load_csv(path)
 
     return df
