@@ -1,4 +1,6 @@
 # run_cleaning.py
+# This part of the code is essential for the processed data being produced.
+
 import pandas as pd
 from Clean_data import clean_energy_data, clean_industry_data, save_clean
 import os
