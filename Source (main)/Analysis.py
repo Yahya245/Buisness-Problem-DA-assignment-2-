@@ -319,34 +319,7 @@ def run_section_3_extra(df: pd.DataFrame):
 
     print("Extra plots saved to Outputs/figures/")
 
-
-# -----------------------------
-# MAIN EXECUTION
-# -----------------------------
-if __name__ == "__main__":
-    print("Loading merged dataset...")
-    merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
-    print("Dataset loaded successfully.\n")
-    
-    merged_data = run_section_1(merged_data)
-    merged_data = run_section_2(merged_data)
-    run_section_3(merged_data)
-    run_section_3_extra(merged_data)
-
-    # ---- CONTROL FLAGS ----
-    RUN_SECTION_4 = False   # ← THIS stops regeneration
-    RUN_SECTION_5 = False
-
-    if RUN_SECTION_4:
-        run_section_4(merged_data)
-
-    if RUN_SECTION_5:
-        run_section_5(merged_data)
-
-    print("\nAnalysis pipeline completed successfully.")
-
-
-# =========================
+    # =========================
 # SECTION 4: CORRELATION & RELATIONSHIPS
 # =========================
 
@@ -463,6 +436,35 @@ def run_section_5(df: pd.DataFrame):
     plt.savefig(f"{fig_dir}/bar_industry_value_per_year.png")
     plt.close()
     print(f"Saved bar chart: {fig_dir}/bar_industry_value_per_year.png")
+
+
+# -----------------------------
+# MAIN EXECUTION
+# -----------------------------
+if __name__ == "__main__":
+    print("Loading merged dataset...")
+    merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
+    print("Dataset loaded successfully.\n")
+    
+    merged_data = run_section_1(merged_data)
+    merged_data = run_section_2(merged_data)
+    run_section_3(merged_data)
+    run_section_3_extra(merged_data)
+
+    # ---- CONTROL FLAGS ----
+    RUN_SECTION_4 = False   # ← THIS stops regeneration
+    RUN_SECTION_5 = False
+
+    if RUN_SECTION_4:
+        run_section_4(merged_data)
+
+    if RUN_SECTION_5:
+        run_section_5(merged_data)
+
+    print("\nAnalysis pipeline completed successfully.")
+
+
+
 
 
 
