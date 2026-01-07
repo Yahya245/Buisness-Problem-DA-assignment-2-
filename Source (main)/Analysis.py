@@ -325,5 +325,129 @@ if __name__ == "__main__":
     
     print("\nAnalysis pipeline completed successfully.")
 
+# =========================
+# SECTION 4: CORRELATION & RELATIONSHIPS
+# =========================
+
+def run_section_4(df: pd.DataFrame):
+    """
+    Section 4 analysis: Correlations and regression insights
+    Saves correlation tables and scatter plots with regression lines to Outputs/figures
+    """
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from scipy.stats import pearsonr
+    import os
+
+    print("\n----- SECTION 4: CORRELATION & RELATIONSHIPS -----")
+
+    # Ensure output folder exists
+    fig_dir = "Outputs/figures"
+    os.makedirs(fig_dir, exist_ok=True)
+
+    # Compute correlation
+    corr = df[["electricity_price", "industry_value_added"]].corr()
+    print("Correlation matrix:")
+    print(corr)
+    
+    # Save correlation table
+    corr.to_csv("Outputs/tables/correlation_table.csv", index=True)
+
+    # Pearson correlation test
+    pearson_coef, p_value = pearsonr(df["electricity_price"], df["industry_value_added"])
+    print(f"\nPearson correlation coefficient: {pearson_coef:.3f}, p-value: {p_value:.5f}")
+
+    # Scatter plot with regression line
+    plt.figure(figsize=(8,6))
+    sns.regplot(
+        data=df,
+        x="electricity_price",
+        y="industry_value_added",
+        scatter_kws={'s':20, 'alpha':0.6},
+        line_kws={'color':'red'}
+    )
+    plt.title("Electricity Price vs Industry Value Added")
+    plt.xlabel("Electricity Price (US cents per kWh)")
+    plt.ylabel("Industry Value Added")
+    plt.tight_layout()
+    plt.savefig(f"{fig_dir}/scatter_electricity_vs_industry.png")
+    plt.close()
+    print(f"Saved scatter plot: {fig_dir}/scatter_electricity_vs_industry.png")
+
+# =========================
+# SECTION 5: TIME SERIES / YEARLY TRENDS
+# =========================
+
+def run_section_5(df: pd.DataFrame):
+    """
+    Section 5 analysis: Trends over years
+    Generates line plots for electricity price and industry value added over time
+    Saves figures to Outputs/figures
+    """
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    import os
+
+    print("\n----- SECTION 5: TIME SERIES / YEARLY TRENDS -----")
+
+    fig_dir = "Outputs/figures"
+    os.makedirs(fig_dir, exist_ok=True)
+
+    # Aggregate by year
+    yearly_avg = df.groupby("year")[["electricity_price", "industry_value_added"]].mean().reset_index()
+    print("Yearly averages head:")
+    print(yearly_avg.head())
+
+    # Line plot: electricity price over time
+    plt.figure(figsize=(10,6))
+    sns.lineplot(data=yearly_avg, x="year", y="electricity_price", marker="o")
+    plt.title("Average Electricity Price Over Years")
+    plt.ylabel("Electricity Price (US cents per kWh)")
+    plt.xlabel("Year")
+    plt.tight_layout()
+    plt.savefig(f"{fig_dir}/line_electricity_price_over_years.png")
+    plt.close()
+    print(f"Saved line plot: {fig_dir}/line_electricity_price_over_years.png")
+
+    # Line plot: industry value added over time
+    plt.figure(figsize=(10,6))
+    sns.lineplot(data=yearly_avg, x="year", y="industry_value_added", marker="o", color="orange")
+    plt.title("Average Industry Value Added Over Years")
+    plt.ylabel("Industry Value Added")
+    plt.xlabel("Year")
+    plt.tight_layout()
+    plt.savefig(f"{fig_dir}/line_industry_value_over_years.png")
+    plt.close()
+    print(f"Saved line plot: {fig_dir}/line_industry_value_over_years.png")
+
+    # Histogram of electricity prices
+    plt.figure(figsize=(8,6))
+    sns.histplot(df["electricity_price"], bins=30, kde=True, color="green")
+    plt.title("Distribution of Electricity Prices")
+    plt.xlabel("Electricity Price")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.savefig(f"{fig_dir}/hist_electricity_price.png")
+    plt.close()
+    print(f"Saved histogram: {fig_dir}/hist_electricity_price.png")
+
+    # Bar chart: mean industry value added per year
+    plt.figure(figsize=(10,6))
+    sns.barplot(data=yearly_avg, x="year", y="industry_value_added", palette="Blues_d")
+    plt.title("Mean Industry Value Added per Year")
+    plt.ylabel("Industry Value Added")
+    plt.xlabel("Year")
+    plt.tight_layout()
+    plt.savefig(f"{fig_dir}/bar_industry_value_per_year.png")
+    plt.close()
+    print(f"Saved bar chart: {fig_dir}/bar_industry_value_per_year.png")
+
+
+
+merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
+
+run_section_4(merged_data)
+run_section_5(merged_data)
+
 
 
