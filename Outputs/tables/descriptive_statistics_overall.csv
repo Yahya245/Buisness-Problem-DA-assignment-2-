@@ -1,4 +1,4 @@
-index,year,electricity_price,industry_value_added
+,year,electricity_price,industry_value_added
 count,1107.0,1107.0,1107.0
 mean,2016.5013550135502,17.67795844625113,25.62033317277806
 std,1.710183298520537,10.854812108862397,10.770363630781196

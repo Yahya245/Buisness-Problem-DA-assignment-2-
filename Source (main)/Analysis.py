@@ -172,137 +172,121 @@ OUTPUT_TABLES_DIR = "Outputs/tables"
 # Ensure output directories exist
 os.makedirs(OUTPUT_TABLES_DIR, exist_ok=True)
 
-# ------------------------------------------------------------
-# SECTION 1: LOAD AND INSPECT MERGED DATA
-# ------------------------------------------------------------
-# Purpose:
-# - Load merged dataset
-# - Validate structure
-# - Check for missing values
-# - Ensure dataset is ready for analysis
-# ------------------------------------------------------------
+# Analysis.py
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
 
-def load_merged_data() -> pd.DataFrame:
-    """
-    Loads the merged energy and industry dataset.
-    """
-    print("Loading merged dataset...")
-    df = pd.read_csv(MERGED_DATA_PATH)
-    print("Dataset loaded successfully.\n")
-    return df
+# Ensure output folders exist
+os.makedirs("Outputs/tables", exist_ok=True)
+os.makedirs("Outputs/figures", exist_ok=True)
 
-
-def inspect_data(df: pd.DataFrame) -> None:
-    """
-    Performs basic inspection of the dataset.
-    """
-    print("----- DATA INSPECTION -----")
+# -----------------------------
+# SECTION 1: DATA INSPECTION
+# -----------------------------
+def run_section_1(df: pd.DataFrame):
+    print("\n----- SECTION 1: DATA INSPECTION -----\n")
+    
+    # Shape and columns
     print(f"Number of rows: {df.shape[0]}")
-    print(f"Number of columns: {df.shape[1]}\n")
-
-    print("Column names:")
-    print(df.columns.tolist(), "\n")
-
+    print(f"Number of columns: {df.shape[1]}")
+    print(f"Columns: {list(df.columns)}\n")
+    
+    # Data types
     print("Data types:")
     print(df.dtypes, "\n")
-
+    
+    # First 5 rows
     print("First 5 rows:")
     print(df.head(), "\n")
-
+    
+    # Missing values
+    missing = df.isna().sum()
     print("Missing values per column:")
-    print(df.isna().sum(), "\n")
+    print(missing, "\n")
+    
+    # Descriptive statistics
+    desc = df.describe()
+    print("Descriptive statistics:")
+    print(desc, "\n")
+    
+    # Save table
+    desc.to_csv("Outputs/tables/descriptive_statistics_overall.csv")
+    
+    return df  # Return df so we can pass it to section 2
 
-
-def run_section_1():
-    """
-    Executes Section 1 of the analysis.
-    """
-    merged_df = load_merged_data()
-    inspect_data(merged_df)
-    return merged_df
-
-
-# ------------------------------------------------------------
-# SECTION 2: DESCRIPTIVE STATISTICS
-# ------------------------------------------------------------
-# Purpose:
-# - Generate summary statistics
-# - Analyse distributions of key variables
-# - Save outputs for reporting
-# ------------------------------------------------------------
-
-def descriptive_statistics(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Generates descriptive statistics for numerical variables.
-    """
-    print("Generating descriptive statistics...")
-    desc_stats = df.describe()
-    print(desc_stats, "\n")
-    return desc_stats
-
-
-def yearly_aggregates(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Computes yearly averages for electricity price
-    and industry value added.
-    """
-    print("Calculating yearly aggregates...")
-    yearly_stats = (
-        df.groupby("year")[["electricity_price", "industry_value_added"]]
-        .mean()
-        .reset_index()
-    )
-    return yearly_stats
-
-
-def country_level_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Computes country-level averages.
-    """
-    print("Calculating country-level averages...")
-    country_stats = (
-        df.groupby("country_code")[["electricity_price", "industry_value_added"]]
-        .mean()
-        .reset_index()
-    )
-    return country_stats
-
-
-def save_table(df: pd.DataFrame, filename: str) -> None:
-    """
-    Saves a dataframe to the Outputs/tables directory.
-    """
-    path = os.path.join(OUTPUT_TABLES_DIR, filename)
-    df.to_csv(path, index=False)
-    print(f"Saved table: {path}")
-
-
+# -----------------------------
+# SECTION 2: YEARLY & COUNTRY AGGREGATES
+# -----------------------------
 def run_section_2(df: pd.DataFrame):
-    """
-    Executes Section 2 of the analysis.
-    """
-    # Overall descriptive statistics
-    desc_stats = descriptive_statistics(df)
-    save_table(desc_stats.reset_index(), "descriptive_statistics_overall.csv")
+    print("\n----- SECTION 2: YEARLY & COUNTRY AGGREGATES -----\n")
+    
+    # Yearly averages
+    yearly_avg = df.groupby("year")[["electricity_price", "industry_value_added"]].mean().reset_index()
+    print("Yearly averages:")
+    print(yearly_avg.head(), "\n")
+    yearly_avg.to_csv("Outputs/tables/yearly_averages.csv", index=False)
+    
+    # Country-level averages
+    country_avg = df.groupby("country_code")[["electricity_price", "industry_value_added"]].mean().reset_index()
+    print("Country-level averages:")
+    print(country_avg.head(), "\n")
+    country_avg.to_csv("Outputs/tables/country_averages.csv", index=False)
+    
+    return df
 
-    # Yearly statistics
-    yearly_stats = yearly_aggregates(df)
-    save_table(yearly_stats, "yearly_averages.csv")
+# -----------------------------
+# SECTION 3: PLOTTING ANALYSIS
+# -----------------------------
+def run_section_3(df: pd.DataFrame):
+    print("\n----- SECTION 3: VISUAL ANALYSIS -----\n")
+    
+    # ---- Electricity price over years ----
+    plt.figure(figsize=(10,6))
+    df.groupby("year")["electricity_price"].mean().plot()
+    plt.title("Average Electricity Price Over Years")
+    plt.xlabel("Year")
+    plt.ylabel("Electricity Price")
+    plt.tight_layout()
+    plt.savefig("Outputs/figures/electricity_price_over_years.png")
+    plt.close()
+    
+    # ---- Industry value added over years ----
+    plt.figure(figsize=(10,6))
+    df.groupby("year")["industry_value_added"].mean().plot(color="orange")
+    plt.title("Average Industry Value Added Over Years")
+    plt.xlabel("Year")
+    plt.ylabel("Industry Value Added")
+    plt.tight_layout()
+    plt.savefig("Outputs/figures/industry_value_added_over_years.png")
+    plt.close()
+    
+    # ---- Scatter plot: electricity vs industry ----
+    plt.figure(figsize=(10,6))
+    plt.scatter(df["electricity_price"], df["industry_value_added"], alpha=0.5)
+    plt.title("Electricity Price vs Industry Value Added")
+    plt.xlabel("Electricity Price")
+    plt.ylabel("Industry Value Added")
+    plt.tight_layout()
+    plt.savefig("Outputs/figures/electricity_vs_industry.png")
+    plt.close()
+    
+    print("Plots saved to Outputs/figures/")
 
-    # Country-level statistics
-    country_stats = country_level_summary(df)
-    save_table(country_stats, "country_averages.csv")
-
-
-# ------------------------------------------------------------
-# MAIN EXECUTION (SECTIONS 1 & 2 ONLY)
-# ------------------------------------------------------------
-
+# -----------------------------
+# MAIN EXECUTION
+# -----------------------------
 if __name__ == "__main__":
-    print("Starting analysis: Sections 1 & 2\n")
+    print("Loading merged dataset...")
+    merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
+    print("Dataset loaded successfully.\n")
+    
+    # Run all analysis sections
+    merged_data = run_section_1(merged_data)
+    merged_data = run_section_2(merged_data)
+    run_section_3(merged_data)
+    
+    print("\nAnalysis pipeline completed successfully.")
 
-    merged_data = run_section_1()
-    run_section_2(merged_data)
 
-    print("\nSections 1 & 2 completed successfully.")
 
