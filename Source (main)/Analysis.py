@@ -267,6 +267,13 @@ def run_section_3(df: pd.DataFrame):
 def run_section_3(df: pd.DataFrame):
     import seaborn as sns
     import matplotlib.pyplot as plt
+    import os
+
+    path = "Outputs/figures/electricity_vs_industry.png"
+
+    # If the plot already exists, do nothing
+    if os.path.exists(path):
+        return
 
     plt.figure(figsize=(10,6))
     sns.regplot(
@@ -280,8 +287,9 @@ def run_section_3(df: pd.DataFrame):
     plt.xlabel("Electricity Price")
     plt.ylabel("Industry Value Added")
     plt.tight_layout()
-    plt.savefig("Outputs/figures/electricity_vs_industry.png")
+    plt.savefig(path)
     plt.close()
+
     
 print("Plots saved to Outputs/figures/")
 
