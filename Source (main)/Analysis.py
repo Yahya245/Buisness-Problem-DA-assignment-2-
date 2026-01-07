@@ -273,6 +273,41 @@ def run_section_3(df: pd.DataFrame):
     
     print("Plots saved to Outputs/figures/")
 
+    # -----------------------------
+# ADDITIONAL PLOTS: Histogram & Bar Chart
+# -----------------------------
+def run_section_3_extra(df: pd.DataFrame):
+    print("\n----- SECTION 3 EXTRA: HISTOGRAM & BAR CHART -----\n")
+
+    # ---- Histogram of electricity prices ----
+    plt.figure(figsize=(10,6))
+    df["electricity_price"].hist(bins=30, color="green", edgecolor="black")
+    plt.title("Histogram of Electricity Prices")
+    plt.xlabel("Electricity Price")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.savefig("Outputs/figures/electricity_price_histogram.png")
+    plt.close()
+
+    # ---- Bar chart: top 10 countries by average industry value added ----
+    top_countries = (
+        df.groupby("country_code")["industry_value_added"]
+        .mean()
+        .sort_values(ascending=False)
+        .head(10)
+    )
+    plt.figure(figsize=(12,6))
+    top_countries.plot(kind="bar", color="purple")
+    plt.title("Top 10 Countries by Average Industry Value Added")
+    plt.xlabel("Country Code")
+    plt.ylabel("Average Industry Value Added")
+    plt.tight_layout()
+    plt.savefig("Outputs/figures/top10_industry_value_bar.png")
+    plt.close()
+
+    print("Extra plots saved to Outputs/figures/")
+
+
 # -----------------------------
 # MAIN EXECUTION
 # -----------------------------
@@ -285,6 +320,8 @@ if __name__ == "__main__":
     merged_data = run_section_1(merged_data)
     merged_data = run_section_2(merged_data)
     run_section_3(merged_data)
+    run_section_3_extra(merged_data)
+
     
     print("\nAnalysis pipeline completed successfully.")
 
