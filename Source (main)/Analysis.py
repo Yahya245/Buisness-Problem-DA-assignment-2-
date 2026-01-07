@@ -1,164 +1,157 @@
 # Statistical analysis & regression
 # this first section of the analysis file will focus on simply mering the two clean datasets and preparing them for high quality analysis 
 
-import pandas as pd
 import os
+import pandas as pd
 
-# ==================================================
-# 1. FILE PATH CONFIGURATION
-# ==================================================
 
-BASE_DIR = "Processed data"
+# ---------------------------------------------------
+# Configuration
+# ---------------------------------------------------
 
-ENERGY_PATH = os.path.join(BASE_DIR, "energy_clean.csv")
-INDUSTRY_PATH = os.path.join(BASE_DIR, "industry_clean.csv")
-MERGED_PATH = os.path.join(BASE_DIR, "merged_energy_industry.csv")
+PROCESSED_DATA_DIR = "Processed data"
+ENERGY_FILE = "energy_clean.csv"
+INDUSTRY_FILE = "industry_clean.csv"
+OUTPUT_FILE = "merged_energy_industry.csv"
 
-# ==================================================
-# 2. LOAD CLEANED DATA
-# ==================================================
 
-def load_clean_data():
-    print("Loading cleaned datasets...")
+# ---------------------------------------------------
+# Utility functions
+# ---------------------------------------------------
 
-    energy_df = pd.read_csv(ENERGY_PATH)
-    industry_df = pd.read_csv(INDUSTRY_PATH)
+def load_csv(path: str) -> pd.DataFrame:
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"File not found: {path}")
 
-    print(f"Energy shape: {energy_df.shape}")
-    print(f"Industry shape: {industry_df.shape}")
+    try:
+        df = pd.read_csv(path, encoding="utf-8")
+    except UnicodeDecodeError:
+        df = pd.read_csv(path, encoding="latin1")
 
-    return energy_df, industry_df
+    return df
 
-# ==================================================
-# 3. BASIC STANDARDISATION
-# ==================================================
 
-def standardise_columns(energy_df, industry_df):
+def validate_columns(df: pd.DataFrame, required_cols: list, df_name: str):
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{df_name} is missing required columns: {missing}\n"
+            f"Available columns: {list(df.columns)}"
+        )
+
+
+# ---------------------------------------------------
+# Merge logic
+# ---------------------------------------------------
+
+def merge_energy_and_industry(
+    energy_df: pd.DataFrame,
+    industry_df: pd.DataFrame
+) -> pd.DataFrame:
     """
-    Ensures consistency in key merge columns.
+    Merge energy and industry datasets using:
+    - energy.country  == industry.country_code
+    - year
     """
 
-    energy_df.columns = energy_df.columns.str.lower().str.strip()
-    industry_df.columns = industry_df.columns.str.lower().str.strip()
+    # ---- Validate structure ----
+    validate_columns(
+        energy_df,
+        ["country", "year", "electricity_price"],
+        "energy_clean"
+    )
 
-    energy_df["country"] = energy_df["country"].str.strip()
-    industry_df["country"] = industry_df["country"].str.strip()
+    validate_columns(
+        industry_df,
+        ["country_code", "year", "industry_value_added"],
+        "industry_clean"
+    )
+
+    # ---- Ensure consistent dtypes ----
+    energy_df["country"] = energy_df["country"].astype(str)
+    industry_df["country_code"] = industry_df["country_code"].astype(str)
 
     energy_df["year"] = pd.to_numeric(energy_df["year"], errors="coerce")
     industry_df["year"] = pd.to_numeric(industry_df["year"], errors="coerce")
 
-    return energy_df, industry_df
+    # ---- Drop rows with missing join keys ----
+    energy_df = energy_df.dropna(subset=["country", "year"])
+    industry_df = industry_df.dropna(subset=["country_code", "year"])
 
-# ==================================================
-# 4. PRE-MERGE VALIDATION
-# ==================================================
+    print(f"Energy rows before merge: {len(energy_df)}")
+    print(f"Industry rows before merge: {len(industry_df)}")
 
-def validate_inputs(energy_df, industry_df):
-    required_energy = ["country", "year", "electricity_price"]
-    required_industry = ["country", "year", "industry_value_added"]
-
-    for col in required_energy:
-        if col not in energy_df.columns:
-            raise ValueError(f"Missing column in energy data: {col}")
-
-    for col in required_industry:
-        if col not in industry_df.columns:
-            raise ValueError(f"Missing column in industry data: {col}")
-
-    print("Column validation passed.")
-
-    energy_df.dropna(subset=required_energy, inplace=True)
-    industry_df.dropna(subset=required_industry, inplace=True)
-
-    print("Rows with missing merge keys removed.")
-    print(f"Energy rows remaining: {len(energy_df)}")
-    print(f"Industry rows remaining: {len(industry_df)}")
-
-    return energy_df, industry_df
-
-# ==================================================
-# 5. KEY OVERLAP DIAGNOSTICS
-# ==================================================
-
-def inspect_merge_coverage(energy_df, industry_df):
-    """
-    Examines overlap in country–year combinations.
-    """
-
-    energy_keys = set(zip(energy_df["country"], energy_df["year"]))
-    industry_keys = set(zip(industry_df["country"], industry_df["year"]))
-
-    overlap = energy_keys.intersection(industry_keys)
-
-    print(f"Energy unique keys: {len(energy_keys)}")
-    print(f"Industry unique keys: {len(industry_keys)}")
-    print(f"Overlapping keys: {len(overlap)}")
-
-# ==================================================
-# 6. MERGE DATASETS
-# ==================================================
-
-def merge_datasets(energy_df, industry_df):
-    print("Merging datasets on country and year...")
-
+    # ---- Perform merge ----
     merged_df = pd.merge(
         energy_df,
         industry_df,
         how="inner",
-        on=["country", "year"]
+        left_on=["country", "year"],
+        right_on=["country_code", "year"]
     )
 
-    print(f"Merged dataset shape: {merged_df.shape}")
+    print(f"Merged rows after join: {len(merged_df)}")
 
-    return merged_df
+    # ---- Clean up columns ----
+    # Keep the industry country_code as the master identifier
+    merged_df = merged_df.rename(columns={
+    "country": "energy_country_code"
+})
 
-# ==================================================
-# 7. POST-MERGE CLEANUP
-# ==================================================
-
-def clean_merged_data(merged_df):
-    merged_df.sort_values(
-        by=["country", "year"],
-        inplace=True
-    )
-
-    merged_df.reset_index(drop=True, inplace=True)
-
-    numeric_cols = [
+# Final column selection (guaranteed to exist)
+    merged_df = merged_df[
+    [
+        "country_code",          # from industry_clean
+        "year",
         "electricity_price",
         "industry_value_added"
     ]
+]
 
-    merged_df[numeric_cols] = merged_df[numeric_cols].apply(
-        pd.to_numeric,
-        errors="coerce"
-    )
+
+    # ---- Reorder columns ----
+    merged_df = merged_df[
+        [
+            "country_code",
+            "year",
+            "electricity_price",
+            "industry_value_added"
+        ]
+    ]
 
     return merged_df
 
-# ==================================================
-# 8. SAVE OUTPUT
-# ==================================================
 
-def save_merged_data(merged_df):
-    merged_df.to_csv(MERGED_PATH, index=False)
-    print(f"Merged dataset saved: {MERGED_PATH}")
-
-# ==================================================
-# 9. PIPELINE EXECUTION
-# ==================================================
+# ---------------------------------------------------
+# Pipeline runner
+# ---------------------------------------------------
 
 def run_merge_pipeline():
-    energy_df, industry_df = load_clean_data()
-    energy_df, industry_df = standardise_columns(energy_df, industry_df)
-    energy_df, industry_df = validate_inputs(energy_df, industry_df)
-    inspect_merge_coverage(energy_df, industry_df)
-    merged_df = merge_datasets(energy_df, industry_df)
-    merged_df = clean_merged_data(merged_df)
-    save_merged_data(merged_df)
+    print("Loading cleaned datasets...")
 
+    energy_path = os.path.join(PROCESSED_DATA_DIR, ENERGY_FILE)
+    industry_path = os.path.join(PROCESSED_DATA_DIR, INDUSTRY_FILE)
+
+    energy_df = load_csv(energy_path)
+    industry_df = load_csv(industry_path)
+
+    print("Energy columns:", list(energy_df.columns))
+    print("Industry columns:", list(industry_df.columns))
+
+    merged_df = merge_energy_and_industry(energy_df, industry_df)
+
+    output_path = os.path.join(PROCESSED_DATA_DIR, OUTPUT_FILE)
+    merged_df.to_csv(output_path, index=False)
+
+    print(f"Merged dataset saved to: {output_path}")
     print("Merge pipeline completed successfully.")
+
+
+# ---------------------------------------------------
+# Entry point
+# ---------------------------------------------------
 
 if __name__ == "__main__":
     run_merge_pipeline()
+
 
