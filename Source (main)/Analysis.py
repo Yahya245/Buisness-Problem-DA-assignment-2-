@@ -264,9 +264,9 @@ def run_section_3(df: pd.DataFrame):
     plt.close()
     
     # ---- Scatter plot: electricity vs industry ----
-    def run_section_3(df: pd.DataFrame):
-        import seaborn as sns
-        import matplotlib.pyplot as plt
+def run_section_3(df: pd.DataFrame):
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
     plt.figure(figsize=(10,6))
     sns.regplot(
