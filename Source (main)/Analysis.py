@@ -7,6 +7,9 @@ import seaborn as sns
 
 
 
+
+
+
 # ---------------------------------------------------
 # Configuration
 # ---------------------------------------------------
@@ -166,6 +169,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import pearsonr
+
+import warnings
+
+# Suppress only the specific Seaborn FutureWarning
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=".*Passing `palette` without assigning `hue` is deprecated.*"
+)
+
 
 # ------------------------------------------------------------
 # CONFIGURATION
@@ -427,7 +440,7 @@ def run_section_5(df: pd.DataFrame):
 
     # Bar chart: mean industry value added per year (fix FutureWarning)
     plt.figure(figsize=(10,6))
-    sns.barplot(data=yearly_avg, x="year", y="industry_value_added", hue=None, palette="Blues_d", dodge=False)
+    sns.barplot(data=yearly_avg, x="year", y="industry_value_added", hue="year", palette="Blues_d",legend=False)
     plt.title("Mean Industry Value Added per Year")
     plt.ylabel("Industry Value Added")
     plt.xlabel("Year")

@@ -193,5 +193,4 @@ def test_nan_values(monkeypatch, tmp_path):
 
 
 
-
-
+# To run the tests, run the code and when the terminal opens paste this command: python3 -m pytest "Source (main)/test_analysis.py" -v
