@@ -1,0 +1,9 @@
+python
+pytest
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+os
+warnings
