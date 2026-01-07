@@ -157,210 +157,198 @@ if __name__ == "__main__":
     run_merge_pipeline()
 
 # ============================================================
-# ANALYSIS.PY
-# Section 1 & 2: Data Loading, Inspection & Descriptive Stats
+# ANALYSIS.PY (Analysing the datasets)
 # ============================================================
 
-import pandas as pd
 import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import pearsonr
 
 # ------------------------------------------------------------
 # CONFIGURATION
 # ------------------------------------------------------------
-
 MERGED_DATA_PATH = "Processed data/merged_energy_industry.csv"
 OUTPUT_TABLES_DIR = "Outputs/tables"
+OUTPUT_FIGURES_DIR = "Outputs/figures"
 
-# Ensure output directories exist
 os.makedirs(OUTPUT_TABLES_DIR, exist_ok=True)
+os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
 
-# Analysis.py
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# Ensure output folders exist
-os.makedirs("Outputs/tables", exist_ok=True)
-os.makedirs("Outputs/figures", exist_ok=True)
-
-# -----------------------------
+# =========================
 # SECTION 1: DATA INSPECTION
-# -----------------------------
+# =========================
 def run_section_1(df: pd.DataFrame):
     print("\n----- SECTION 1: DATA INSPECTION -----\n")
     
-    # Shape and columns
     print(f"Number of rows: {df.shape[0]}")
     print(f"Number of columns: {df.shape[1]}")
     print(f"Columns: {list(df.columns)}\n")
-    
-    # Data types
     print("Data types:")
     print(df.dtypes, "\n")
-    
-    # First 5 rows
     print("First 5 rows:")
     print(df.head(), "\n")
-    
-    # Missing values
-    missing = df.isna().sum()
     print("Missing values per column:")
-    print(missing, "\n")
-    
-    # Descriptive statistics
-    desc = df.describe()
+    print(df.isna().sum(), "\n")
     print("Descriptive statistics:")
+    desc = df.describe()
     print(desc, "\n")
     
-    # Save table
-    desc.to_csv("Outputs/tables/descriptive_statistics_overall.csv")
-    
-    return df  # Return df so we can pass it to section 2
+    # Save CSV even if empty
+    desc.to_csv(os.path.join(OUTPUT_TABLES_DIR, "descriptive_statistics_overall.csv"))
+    return df
 
-# -----------------------------
+# =========================
 # SECTION 2: YEARLY & COUNTRY AGGREGATES
-# -----------------------------
+# =========================
 def run_section_2(df: pd.DataFrame):
     print("\n----- SECTION 2: YEARLY & COUNTRY AGGREGATES -----\n")
     
-    # Yearly averages
-    yearly_avg = df.groupby("year")[["electricity_price", "industry_value_added"]].mean().reset_index()
+    yearly_avg = df.groupby("year")[["electricity_price","industry_value_added"]].mean().reset_index()
+    yearly_avg.to_csv(os.path.join(OUTPUT_TABLES_DIR, "yearly_averages.csv"), index=False)
     print("Yearly averages:")
     print(yearly_avg.head(), "\n")
-    yearly_avg.to_csv("Outputs/tables/yearly_averages.csv", index=False)
     
-    # Country-level averages
-    country_avg = df.groupby("country_code")[["electricity_price", "industry_value_added"]].mean().reset_index()
+    country_avg = df.groupby("country_code")[["electricity_price","industry_value_added"]].mean().reset_index()
+    country_avg.to_csv(os.path.join(OUTPUT_TABLES_DIR, "country_averages.csv"), index=False)
     print("Country-level averages:")
     print(country_avg.head(), "\n")
-    country_avg.to_csv("Outputs/tables/country_averages.csv", index=False)
     
     return df
 
-# -----------------------------
-# SECTION 3: PLOTTING ANALYSIS
-# -----------------------------
+# =========================
+# SECTION 3: SCATTER PLOT
+# =========================
 def run_section_3(df: pd.DataFrame):
     print("\n----- SECTION 3: VISUAL ANALYSIS -----\n")
     
-    # ---- Electricity price over years ----
-    plt.figure(figsize=(10,6))
-    df.groupby("year")["electricity_price"].mean().plot()
-    plt.title("Average Electricity Price Over Years")
-    plt.xlabel("Year")
-    plt.ylabel("Electricity Price")
-    plt.tight_layout()
-    plt.savefig("Outputs/figures/electricity_price_over_years.png")
-    plt.close()
+    path = os.path.join(OUTPUT_FIGURES_DIR, "electricity_vs_industry.png")
+    os.makedirs(OUTPUT_FIGURES_DIR, exist_ok=True)
     
-    # ---- Industry value added over years ----
     plt.figure(figsize=(10,6))
-    df.groupby("year")["industry_value_added"].mean().plot(color="orange")
-    plt.title("Average Industry Value Added Over Years")
-    plt.xlabel("Year")
-    plt.ylabel("Industry Value Added")
-    plt.tight_layout()
-    plt.savefig("Outputs/figures/industry_value_added_over_years.png")
-    plt.close()
     
-    # ---- Scatter plot: electricity vs industry ----
-def run_section_3(df: pd.DataFrame):
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    import os
-
-    path = "Outputs/figures/electricity_vs_industry.png"
-
-    # If the plot already exists, do nothing
-    if os.path.exists(path):
-        return
-
-    plt.figure(figsize=(10,6))
-    sns.regplot(
-        data=df,
-        x="electricity_price",
-        y="industry_value_added",
-        scatter_kws={"alpha": 0.5, "s": 20},
-        line_kws={"color": "red"}
-    )
+    if df.empty or df["electricity_price"].dropna().empty or df["industry_value_added"].dropna().empty:
+        print("No data available for scatter plot.")
+        plt.text(0.5,0.5,"No data available",ha='center',va='center',fontsize=14)
+    else:
+        sns.regplot(
+            data=df,
+            x="electricity_price",
+            y="industry_value_added",
+            scatter_kws={"alpha":0.5, "s":20},
+            line_kws={"color":"red"}
+        )
+    
     plt.title("Electricity Price vs Industry Value Added")
     plt.xlabel("Electricity Price")
     plt.ylabel("Industry Value Added")
     plt.tight_layout()
     plt.savefig(path)
     plt.close()
+    print("Scatter plot saved.")
 
-    
-print("Plots saved to Outputs/figures/")
-
-    # -----------------------------
-# ADDITIONAL PLOTS: Histogram & Bar Chart
+# -----------------------------
+# SECTION 3 EXTRA: HISTOGRAM & BAR CHART
 # -----------------------------
 def run_section_3_extra(df: pd.DataFrame):
+    import matplotlib.pyplot as plt
+    import os
+
     print("\n----- SECTION 3 EXTRA: HISTOGRAM & BAR CHART -----\n")
 
+    fig_dir = "Outputs/figures"
+    os.makedirs(fig_dir, exist_ok=True)
+
     # ---- Histogram of electricity prices ----
-    plt.figure(figsize=(10,6))
-    df["electricity_price"].hist(bins=30, color="green", edgecolor="black")
-    plt.title("Histogram of Electricity Prices")
-    plt.xlabel("Electricity Price")
-    plt.ylabel("Frequency")
-    plt.tight_layout()
-    plt.savefig("Outputs/figures/electricity_price_histogram.png")
-    plt.close()
+    hist_path = f"{fig_dir}/electricity_price_histogram.png"
+    if df.empty or df["electricity_price"].dropna().empty:
+        plt.figure(figsize=(10,6))
+        plt.text(0.5, 0.5, "No data available", ha='center', va='center', fontsize=14)
+        plt.title("Histogram of Electricity Prices")
+        plt.xlabel("Electricity Price")
+        plt.ylabel("Frequency")
+        plt.tight_layout()
+        plt.savefig(hist_path)
+        plt.close()
+    else:
+        plt.figure(figsize=(10,6))
+        df["electricity_price"].hist(bins=30, color="green", edgecolor="black")
+        plt.title("Histogram of Electricity Prices")
+        plt.xlabel("Electricity Price")
+        plt.ylabel("Frequency")
+        plt.tight_layout()
+        plt.savefig(hist_path)
+        plt.close()
 
     # ---- Bar chart: top 10 countries by average industry value added ----
+    bar_path = f"{fig_dir}/top10_industry_value_bar.png"
     top_countries = (
         df.groupby("country_code")["industry_value_added"]
         .mean()
         .sort_values(ascending=False)
         .head(10)
     )
-    plt.figure(figsize=(12,6))
-    top_countries.plot(kind="bar", color="purple")
-    plt.title("Top 10 Countries by Average Industry Value Added")
-    plt.xlabel("Country Code")
-    plt.ylabel("Average Industry Value Added")
-    plt.tight_layout()
-    plt.savefig("Outputs/figures/top10_industry_value_bar.png")
-    plt.close()
+
+    if top_countries.empty:
+        plt.figure(figsize=(12,6))
+        plt.text(0.5, 0.5, "No data available", ha='center', va='center', fontsize=14)
+        plt.tight_layout()
+        plt.savefig(bar_path)
+        plt.close()
+    else:
+        plt.figure(figsize=(12,6))
+        top_countries.plot(kind="bar", color="purple")
+        plt.title("Top 10 Countries by Average Industry Value Added")
+        plt.xlabel("Country Code")
+        plt.ylabel("Average Industry Value Added")
+        plt.tight_layout()
+        plt.savefig(bar_path)
+        plt.close()
 
     print("Extra plots saved to Outputs/figures/")
 
-    # =========================
+
+# =========================
 # SECTION 4: CORRELATION & RELATIONSHIPS
 # =========================
-
 def run_section_4(df: pd.DataFrame):
-    """
-    Section 4 analysis: Correlations and regression insights
-    Saves correlation tables and scatter plots with regression lines to Outputs/figures
-    """
     import seaborn as sns
     import matplotlib.pyplot as plt
     from scipy.stats import pearsonr
     import os
+    import numpy as np
 
-    print("\n----- SECTION 4: CORRELATION & RELATIONSHIPS -----")
-
-    # Ensure output folder exists
+    print("\n----- SECTION 4: CORRELATION & RELATIONSHIPS -----\n")
     fig_dir = "Outputs/figures"
     os.makedirs(fig_dir, exist_ok=True)
+    corr_file = "Outputs/tables/correlation_table.csv"
+    os.makedirs(os.path.dirname(corr_file), exist_ok=True)
+
+    if df.empty or df[["electricity_price", "industry_value_added"]].dropna().empty:
+        print("No data available for this section.")
+        # Create placeholder correlation table
+        pd.DataFrame({
+            "electricity_price": [np.nan],
+            "industry_value_added": [np.nan]
+        }).to_csv(corr_file, index=False)
+        # Create placeholder scatter plot
+        plt.figure()
+        plt.savefig(f"{fig_dir}/scatter_electricity_vs_industry.png")
+        plt.close()
+        return
 
     # Compute correlation
     corr = df[["electricity_price", "industry_value_added"]].corr()
+    pearson_coef, p_value = pearsonr(df["electricity_price"].dropna(), df["industry_value_added"].dropna())
     print("Correlation matrix:")
     print(corr)
-    
-    # Save correlation table
-    corr.to_csv("Outputs/tables/correlation_table.csv", index=True)
+    corr.to_csv(corr_file, index=True)
+    print(f"Correlation CSV saved: {corr_file}")
+    print(f"Pearson correlation: {pearson_coef}, p-value: {p_value}")
 
-
-    # Pearson correlation test
-    pearson_coef, p_value = pearsonr(df["electricity_price"], df["industry_value_added"])
-    print(f"\nPearson correlation coefficient: {pearson_coef:.3f}, p-value: {p_value:.5f}")
-
-    # Scatter plot with regression line
+    # Scatter plot
     plt.figure(figsize=(8,6))
     sns.regplot(
         data=df,
@@ -377,31 +365,37 @@ def run_section_4(df: pd.DataFrame):
     plt.close()
     print(f"Saved scatter plot: {fig_dir}/scatter_electricity_vs_industry.png")
 
+
 # =========================
 # SECTION 5: TIME SERIES / YEARLY TRENDS
 # =========================
-
 def run_section_5(df: pd.DataFrame):
-    """
-    Section 5 analysis: Trends over years
-    Generates line plots for electricity price and industry value added over time
-    Saves figures to Outputs/figures
-    """
     import seaborn as sns
     import matplotlib.pyplot as plt
     import os
 
-    print("\n----- SECTION 5: TIME SERIES / YEARLY TRENDS -----")
-
+    print("\n----- SECTION 5: TIME SERIES / YEARLY TRENDS -----\n")
     fig_dir = "Outputs/figures"
     os.makedirs(fig_dir, exist_ok=True)
 
+    if df.empty or df[["electricity_price", "industry_value_added"]].dropna().empty:
+        print("No data available for this section.")
+        # Create placeholder files
+        for f in [
+            f"{fig_dir}/line_electricity_price_over_years.png",
+            f"{fig_dir}/line_industry_value_over_years.png",
+            f"{fig_dir}/hist_electricity_price.png",
+            f"{fig_dir}/bar_industry_value_per_year.png"
+        ]:
+            plt.figure()
+            plt.savefig(f)
+            plt.close()
+        return
+
     # Aggregate by year
     yearly_avg = df.groupby("year")[["electricity_price", "industry_value_added"]].mean().reset_index()
-    print("Yearly averages head:")
-    print(yearly_avg.head())
 
-    # Line plot: electricity price over time
+    # Line plot: electricity price
     plt.figure(figsize=(10,6))
     sns.lineplot(data=yearly_avg, x="year", y="electricity_price", marker="o")
     plt.title("Average Electricity Price Over Years")
@@ -410,9 +404,8 @@ def run_section_5(df: pd.DataFrame):
     plt.tight_layout()
     plt.savefig(f"{fig_dir}/line_electricity_price_over_years.png")
     plt.close()
-    print(f"Saved line plot: {fig_dir}/line_electricity_price_over_years.png")
 
-    # Line plot: industry value added over time
+    # Line plot: industry value added
     plt.figure(figsize=(10,6))
     sns.lineplot(data=yearly_avg, x="year", y="industry_value_added", marker="o", color="orange")
     plt.title("Average Industry Value Added Over Years")
@@ -421,7 +414,6 @@ def run_section_5(df: pd.DataFrame):
     plt.tight_layout()
     plt.savefig(f"{fig_dir}/line_industry_value_over_years.png")
     plt.close()
-    print(f"Saved line plot: {fig_dir}/line_industry_value_over_years.png")
 
     # Histogram of electricity prices
     plt.figure(figsize=(8,6))
@@ -432,44 +424,43 @@ def run_section_5(df: pd.DataFrame):
     plt.tight_layout()
     plt.savefig(f"{fig_dir}/hist_electricity_price.png")
     plt.close()
-    print(f"Saved histogram: {fig_dir}/hist_electricity_price.png")
 
-    # Bar chart: mean industry value added per year
+    # Bar chart: mean industry value added per year (fix FutureWarning)
     plt.figure(figsize=(10,6))
-    sns.barplot(data=yearly_avg, x="year", y="industry_value_added", palette="Blues_d")
+    sns.barplot(data=yearly_avg, x="year", y="industry_value_added", hue=None, palette="Blues_d", dodge=False)
     plt.title("Mean Industry Value Added per Year")
     plt.ylabel("Industry Value Added")
     plt.xlabel("Year")
+    plt.legend([], [], frameon=False)  # Remove legend to avoid warning
     plt.tight_layout()
     plt.savefig(f"{fig_dir}/bar_industry_value_per_year.png")
     plt.close()
-    print(f"Saved bar chart: {fig_dir}/bar_industry_value_per_year.png")
 
+    print("Section 5 plots saved successfully.")
 
-# -----------------------------
+# =========================
 # MAIN EXECUTION
-# -----------------------------
-if __name__ == "__main__":
+# =========================
+if __name__=="__main__":
     print("Loading merged dataset...")
-    merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
+    merged_data = pd.read_csv(MERGED_DATA_PATH)
     print("Dataset loaded successfully.\n")
     
     merged_data = run_section_1(merged_data)
     merged_data = run_section_2(merged_data)
     run_section_3(merged_data)
     run_section_3_extra(merged_data)
-
-    # ---- CONTROL FLAGS ----
-    RUN_SECTION_4 = False   # ← THIS stops regeneration
-    RUN_SECTION_5 = False
-
+    
+    RUN_SECTION_4 = True
+    RUN_SECTION_5 = True
+    
     if RUN_SECTION_4:
         run_section_4(merged_data)
-
     if RUN_SECTION_5:
         run_section_5(merged_data)
-
+    
     print("\nAnalysis pipeline completed successfully.")
+
 
 
 
