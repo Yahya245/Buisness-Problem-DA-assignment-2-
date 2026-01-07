@@ -3,6 +3,8 @@
 
 import os
 import pandas as pd
+import seaborn as sns
+
 
 
 # ---------------------------------------------------
@@ -262,8 +264,18 @@ def run_section_3(df: pd.DataFrame):
     plt.close()
     
     # ---- Scatter plot: electricity vs industry ----
+    def run_section_3(df: pd.DataFrame):
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+
     plt.figure(figsize=(10,6))
-    plt.scatter(df["electricity_price"], df["industry_value_added"], alpha=0.5)
+    sns.regplot(
+        data=df,
+        x="electricity_price",
+        y="industry_value_added",
+        scatter_kws={"alpha": 0.5, "s": 20},
+        line_kws={"color": "red"}
+    )
     plt.title("Electricity Price vs Industry Value Added")
     plt.xlabel("Electricity Price")
     plt.ylabel("Industry Value Added")
@@ -271,7 +283,7 @@ def run_section_3(df: pd.DataFrame):
     plt.savefig("Outputs/figures/electricity_vs_industry.png")
     plt.close()
     
-    print("Plots saved to Outputs/figures/")
+print("Plots saved to Outputs/figures/")
 
     # -----------------------------
 # ADDITIONAL PLOTS: Histogram & Bar Chart
@@ -316,14 +328,23 @@ if __name__ == "__main__":
     merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
     print("Dataset loaded successfully.\n")
     
-    # Run all analysis sections
     merged_data = run_section_1(merged_data)
     merged_data = run_section_2(merged_data)
     run_section_3(merged_data)
     run_section_3_extra(merged_data)
 
-    
+    # ---- CONTROL FLAGS ----
+    RUN_SECTION_4 = False   # ← THIS stops regeneration
+    RUN_SECTION_5 = False
+
+    if RUN_SECTION_4:
+        run_section_4(merged_data)
+
+    if RUN_SECTION_5:
+        run_section_5(merged_data)
+
     print("\nAnalysis pipeline completed successfully.")
+
 
 # =========================
 # SECTION 4: CORRELATION & RELATIONSHIPS
@@ -352,6 +373,7 @@ def run_section_4(df: pd.DataFrame):
     
     # Save correlation table
     corr.to_csv("Outputs/tables/correlation_table.csv", index=True)
+
 
     # Pearson correlation test
     pearson_coef, p_value = pearsonr(df["electricity_price"], df["industry_value_added"])
@@ -444,10 +466,7 @@ def run_section_5(df: pd.DataFrame):
 
 
 
-merged_data = pd.read_csv("Processed data/merged_energy_industry.csv")
 
-run_section_4(merged_data)
-run_section_5(merged_data)
 
 
 
